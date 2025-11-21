@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Parser JSON</title>
+    <style>
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #a8edea, #fed6e3);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        min-height: 100vh;
+        padding: 50px 20px;
+    }
+
+    h2 {
+        color: #333;
+        margin-bottom: 20px;
+    }
+
+    #txtInput {
+        width: 400px;
+        padding: 10px 15px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        font-size: 16px;
+        margin-bottom: 15px;
+    }
+
+    button {
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: none;
+        background-color: #007bff;
+        color: white;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+        background-color: #0056b3;
+    }
+
+    #response {
+        margin-top: 20px;
+        width: 90%;
+        max-width: 600px;
+        padding: 15px;
+        background-color: #fff;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+</style>
+</head>
+<body>
+    <h2>Parser JSON</h2>
+
+    <input id="txtInput" type="text" placeholder="Wpisz tekst...">
+    <button onclick="sendPost()">Wyślij</button>
+
+    <pre id="response">Odpowiedź pojawi się tutaj...</pre>
+
+    <script>
+        async function sendPost() {
+    const text = document.getElementById("txtInput").value;
+
+    if (!text.trim()) {
+        alert("Wpisz jakiś tekst!");
+        return;
+    }
+
+    try {
+        const res = await fetch("/parser", {
+            method: "POST",
+            headers: {
+                "Content-Type": "text/plain"
+            },
+            body: text
+        });
+
+        const data = await res.text();
+
+        if (!res.ok) {
+            document.getElementById("response").textContent = `Wystąpił błąd:\n${data}`;
+            return;
+        }
+
+        document.getElementById("response").textContent = data;
+    } catch (err) {
+        document.getElementById("response").textContent = `Wystąpił błąd:\n${err.message}`;
+    }
+}
+
+    </script>
+</body>
+</html>
