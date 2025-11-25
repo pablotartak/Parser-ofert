@@ -4,45 +4,85 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
-	"strconv"
 	"strings"
 )
 
-func parse(rawText string) (string, error) {
-	fields := strings.Split(rawText, ",")
-	result := make(map[string]interface{})
-
-	for i := 0; i < len(fields); i++ {
-		parts := strings.Split(fields[i], ":")
+func parseParametry(lines []string) map[string]string {
+	result := make(map[string]string)
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) < 2 {
+			continue
+		}
 		key := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])
-		switch{
-		case value == "tak":
-			result[key] = true
-		case value == "nie":
-			result[key] = false
-		case key == "iloscpokoi" :
-			val, err := strconv.Atoi(value)
-			if err != nil {
-				return "", fmt.Errorf("Błąd konwersji iloscpokoi: %v", err)
-			}
-			result[key] = val
-		case key == "metraz" :
-			val, err := strconv.ParseFloat(value, 64)
-			if err != nil {
-				return "", fmt.Errorf("Błąd konwersji metraz: %v", err)
-			}
-			result[key] = val 
-		default: 
+		result[key] = value
+	}
+	return result
+}
+
+func parseMedia(line string) map[string]interface{} {
+	result := make(map[string]interface{})
+	items := strings.Split(line, ",")
+	for _, item := range items {
+		item = strings.TrimSpace(item)
+		if item == "" {
+			continue
+		}
+		parts := strings.SplitN(item, ":", 2)
+		if len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			value := strings.TrimSpace(parts[1])
 			result[key] = value
-		
+		} else {
+			result[item] = true
+		}
 	}
+	return result
+}
+
+func parseInfo(line string) []string {
+	var result []string
+	for _, p := range strings.Split(line, ",") {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			result = append(result, p)
+		}
 	}
-	jsonData, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("Błąd zamiany na JSON: %v", err)
+	return result
+}
+
+func parseOpis(lines []string) (string, map[string]string) {
+	opisBuilder := strings.Builder{}
+	endParams := make(map[string]string)
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			value := strings.TrimSpace(parts[1])
+
+			if value != "" {
+				endParams[key] = value
+				continue
+			}
+		}
+		if opisBuilder.Len() > 0 {
+			opisBuilder.WriteString(" ")
+		}
+		opisBuilder.WriteString(line)
 	}
-	return string(jsonData), nil
+
+	return opisBuilder.String(), endParams
 }
 
 func main() {
@@ -58,12 +98,70 @@ func main() {
 			return fmt.Errorf("Brak danych w body POST")
 		}
 
-		jsonString, err := parse(raw)
-		if err != nil {
-			return c.Status(400).SendString(err.Error())
+		lines := strings.Split(raw, "\n")
+
+		var paramLines []string
+		var mediaLine, infoLine string
+		var opisLines []string
+		mode := "parametry"
+
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+
+			switch line {
+			case "Media":
+				mode = "media"
+				continue
+			case "Informacje dodatkowe":
+				mode = "info"
+				continue
+			case "Opis":
+				mode = "opis"
+				continue
+			}
+
+			switch mode {
+			case "parametry":
+				paramLines = append(paramLines, line)
+			case "media":
+				if mediaLine != "" {
+					mediaLine += " "
+				}
+				mediaLine += line
+			case "info":
+				if infoLine != "" {
+					infoLine += " "
+				}
+				infoLine += line
+			case "opis":
+				opisLines = append(opisLines, line)
+			}
 		}
 
-		return c.SendString(jsonString)
+		parametry := parseParametry(paramLines)
+		media := parseMedia(mediaLine)
+		info := parseInfo(infoLine)
+		opis, endParams := parseOpis(opisLines)
+
+		final := map[string]interface{}{
+			"Parametry oferty": parametry,
+			"Media": media,
+			"Informacje dodatkowe": info,
+			"Opis": opis,
+		}
+		for k, v := range endParams {
+			final[k] = v
+		}
+
+		jsonData, err := json.MarshalIndent(final, "", "  ")
+		if err != nil {
+			return c.Status(500).SendString(fmt.Sprintf("Błąd konwersji do JSON: %v", err))
+		}
+
+		return c.SendString(string(jsonData))
 	})
 
 	app.Listen(":8080")

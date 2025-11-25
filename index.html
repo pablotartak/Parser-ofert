@@ -3,6 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>Parser JSON</title>
+    <script>
+        function autoGrow(el) {
+    el.style.height = "auto"; 
+    el.style.height = el.scrollHeight + "px";
+}
+    </script>
     <style>
     body {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -61,7 +67,7 @@
 <body>
     <h2>Parser JSON</h2>
 
-    <input id="txtInput" type="text" placeholder="Wpisz tekst...">
+    <textarea id="txtInput" type="text" placeholder="Wpisz tekst..." oninput="autoGrow(this)"> </textarea>
     <button onclick="sendPost()">Wyślij</button>
 
     <pre id="response">Odpowiedź pojawi się tutaj...</pre>
