@@ -4,7 +4,7 @@ import (
 	"strings"
 )
 //Funkcja dostaje liste linijek pocietych w main i dzieli je na key i value
-func parseParametry(lines []string) map[string]string {
+func ParseParametry(lines []string) map[string]string {
 	result := make(map[string]string)
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -22,7 +22,7 @@ func parseParametry(lines []string) map[string]string {
 	return result
 }
 //Rozdziela tekst na osobne elementy na podstawie przecinka a poźniej dzieli to na key i value na podstawie dwukropka jeśli nie ma dwukropka traktuje to jako true
-func parseMedia(line string) map[string]interface{} {
+func ParseMedia(line string) map[string]interface{} {
 	result := make(map[string]interface{})
 	items := strings.Split(line, ",")
 	for _, item := range items {
@@ -42,7 +42,7 @@ func parseMedia(line string) map[string]interface{} {
 	return result
 }
 //dzieli tekst na wartości biorąc "informacje dodatkowe " jako key
-func parseInfo(line string) []string {
+func ParseInfo(line string) []string {
 	var result []string
 	for _, p := range strings.Split(line, ",") {
 		p = strings.TrimSpace(p)
@@ -54,7 +54,7 @@ func parseInfo(line string) []string {
 }
 //  Oddziela opis od parametrów , opis łączy w jeden string i przypisuje do klucza "opis"
 // Linie w formacie key: value trafiają do mapy endParams
-func parseOpis(lines []string) (string, map[string]string) {
+func ParseOpis(lines []string) (string, map[string]string) {
 	opisBuilder := strings.Builder{}
 	endParams := make(map[string]string)
 
