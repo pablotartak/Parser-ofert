@@ -1,4 +1,4 @@
-module mojprojekt
+module github.com/pablotartak/Parser-Ofert
 
 go 1.25.4
 
