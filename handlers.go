@@ -3,7 +3,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
-	"github.com/pablotartak/parser-ofert/parser/services"
+	"github.com/pablotartak/parser-ofert/services"
 	"strings"
 )
 func main() {
