@@ -12,27 +12,23 @@ import (
 func main() {
 	app := fiber.New()
 
-	// Serwowanie index.html
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendFile("index.html")
 	})
 
-	// Endpoint POST /parser
 	app.Post("/parser", func(c *fiber.Ctx) error {
-		raw := string(c.Body())
+		raw := strings.TrimSpace(string(c.Body()))
 		if raw == "" {
-			return fmt.Errorf("Brak danych w body POST")
+			return c.Status(400).SendString("Brak danych w body POST")
 		}
 
 		lines := strings.Split(raw, "\n")
 
-		// zmienne lokalne do przechowywania linii dla każdej sekcji
 		var paramLines []string
 		var mediaLine, infoLine string
 		var opisLines []string
 		mode := "parametry"
 
-		// Przełączanie sekcji według nagłówków
 		for _, line := range lines {
 			line = strings.TrimSpace(line)
 			if line == "" {
@@ -69,13 +65,26 @@ func main() {
 			}
 		}
 
-		// Wywołanie funkcji parsera z pakietu services
-		parametry := services.ParseParametry(paramLines)
-		media := services.ParseMedia(mediaLine)
-		info := services.ParseInfo(infoLine)
-		opis, endParams := services.ParseOpis(opisLines)
+		parametry, err := services.ParseParametry(paramLines)
+		if err != nil {
+			return c.Status(400).SendString(err.Error())
+		}
 
-		// Łączenie wyników w jedną mapę
+		media, err := services.ParseMedia(mediaLine)
+		if err != nil {
+			return c.Status(400).SendString(err.Error())
+		}
+
+		info, err := services.ParseInfo(infoLine)
+		if err != nil {
+			return c.Status(400).SendString(err.Error())
+		}
+
+		opis, endParams, err := services.ParseOpis(opisLines)
+		if err != nil {
+			return c.Status(400).SendString(err.Error())
+		}
+
 		final := map[string]interface{}{
 			"Parametry oferty":     parametry,
 			"Media":                media,
@@ -86,15 +95,13 @@ func main() {
 			final[k] = v
 		}
 
-		// Konwersja do JSON
 		jsonData, err := json.MarshalIndent(final, "", "  ")
 		if err != nil {
-			return c.Status(500).SendString(fmt.Sprintf("Błąd konwersji do JSON: %v", err))
+			return c.Status(500).SendString(fmt.Sprintf("Błąd JSON: %v", err))
 		}
 
-		return c.SendString(string(jsonData))
+		return c.Send(jsonData)
 	})
 
-	// Uruchomienie serwera na porcie 8080
 	app.Listen(":8080")
 }

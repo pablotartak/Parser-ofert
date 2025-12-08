@@ -1,48 +1,78 @@
 package services
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 )
-//Funkcja dostaje liste linijek pocietych w main i dzieli je na key i value
-func ParseParametry(lines []string) map[string]string {
+
+// Funkcja dostaje liste linijek i dzieli je na key i value
+func ParseParametry(lines []string) (map[string]string, error) {
 	result := make(map[string]string)
-	for _, line := range lines {
+
+	for i, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
 		}
+
 		parts := strings.SplitN(line, ":", 2)
 		if len(parts) < 2 {
-			continue
+			return nil, fmt.Errorf("linia %d nie zawiera ':' -> %q", i+1, line)
 		}
+
 		key := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])
+
+		if key == "" || value == "" {
+			return nil, fmt.Errorf("linia %d ma pusty key lub value -> %q", i+1, line)
+		}
+
 		result[key] = value
 	}
-	return result
+
+	return result, nil
 }
-//Rozdziela tekst na osobne elementy na podstawie przecinka a poźniej dzieli to na key i value na podstawie dwukropka jeśli nie ma dwukropka traktuje to jako true
-func ParseMedia(line string) map[string]interface{} {
+
+// Rozdziela tekst na elementy, brak ':' = true
+func ParseMedia(line string) (map[string]interface{}, error) {
+	if strings.TrimSpace(line) == "" {
+		return nil, errors.New("pusta linia media")
+	}
+
 	result := make(map[string]interface{})
 	items := strings.Split(line, ",")
+
 	for _, item := range items {
 		item = strings.TrimSpace(item)
 		if item == "" {
 			continue
 		}
+
 		parts := strings.SplitN(item, ":", 2)
 		if len(parts) == 2 {
 			key := strings.TrimSpace(parts[0])
 			value := strings.TrimSpace(parts[1])
+
+			if key == "" || value == "" {
+				return nil, fmt.Errorf("niepoprawny media item: %q", item)
+			}
+
 			result[key] = value
 		} else {
 			result[item] = true
 		}
 	}
-	return result
+
+	return result, nil
 }
-//dzieli tekst na wartości biorąc "informacje dodatkowe " jako key
-func ParseInfo(line string) []string {
+
+// Dzieli tekst na listę informacji
+func ParseInfo(line string) ([]string, error) {
+	if strings.TrimSpace(line) == "" {
+		return nil, errors.New("pusta linia info")
+	}
+
 	var result []string
 	for _, p := range strings.Split(line, ",") {
 		p = strings.TrimSpace(p)
@@ -50,15 +80,20 @@ func ParseInfo(line string) []string {
 			result = append(result, p)
 		}
 	}
-	return result
+
+	if len(result) == 0 {
+		return nil, errors.New("brak poprawnych informacji")
+	}
+
+	return result, nil
 }
-//  Oddziela opis od parametrów , opis łączy w jeden string i przypisuje do klucza "opis"
-// Linie w formacie key: value trafiają do mapy endParams
-func ParseOpis(lines []string) (string, map[string]string) {
+
+// Oddziela opis od parametrów
+func ParseOpis(lines []string) (string, map[string]string, error) {
 	opisBuilder := strings.Builder{}
 	endParams := make(map[string]string)
 
-	for _, line := range lines {
+	for i, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
@@ -69,16 +104,25 @@ func ParseOpis(lines []string) (string, map[string]string) {
 			key := strings.TrimSpace(parts[0])
 			value := strings.TrimSpace(parts[1])
 
+			if key == "" {
+				return "", nil, fmt.Errorf("pusty key w linii %d", i+1)
+			}
+
 			if value != "" {
 				endParams[key] = value
 				continue
 			}
 		}
+
 		if opisBuilder.Len() > 0 {
 			opisBuilder.WriteString(" ")
 		}
 		opisBuilder.WriteString(line)
 	}
 
-	return opisBuilder.String(), endParams
+	if opisBuilder.Len() == 0 && len(endParams) == 0 {
+		return "", nil, errors.New("brak opisu i parametrów")
+	}
+
+	return opisBuilder.String(), endParams, nil
 }
